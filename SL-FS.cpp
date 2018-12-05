@@ -33,7 +33,7 @@ public:
     Folder *father;
 
     vector <Folder *> childFolders;
-    vector <File *> files;
+    vector <File *> childFiles;
 
     Folder( string name ){
         this->id = counter_id;
@@ -44,17 +44,48 @@ public:
         ++counter_id;
     }
 
-    void setFather( Folder *f ){ father = f; }
+    void setFather( Folder *folder ){
+        father = folder;
+    }
 
-    string getCurrentPath( Folder *f ){
-        if(f->father != NULL)
-            return getCurrentPath(f->father) + "/" + name;
+    bool checkDuplicatedName( string name ){
+        for(int i = 0; i < this->childFolders.size(); ++i)
+            if ( childFolders[i]->name == name )
+                return false;
+
+        for(int i = 0; i < this->childFiles.size(); ++i)
+            if ( childFiles[i]->name == name )
+                return false;
+
+        return true;
+    }
+
+    string getCurrentPath( Folder *folder ){
+        if(folder->father != NULL)
+            return getCurrentPath(folder->father) + "/" + folder->name;
         else
             return "root";
     }
 
-    void addSubFolder( Folder *f ){ childFolders.push_back(f); }
-    void addFile( File *f ){ files.push_back( f ); }
+    bool addSubFolder( Folder *f ){
+        if( checkDuplicatedName(f->name) ){
+            childFolders.push_back(f);
+            return true;
+        }else{
+            cout << "SL-FS: There already exists a folder/file with that name";
+            return false;
+        }
+    }
+
+    bool addFile( File *f ){
+        if( checkDuplicatedName(f->name) ){
+            childFiles.push_back( f );
+            return true;
+        }else{
+            cout << "SL-FS: There already exists a folder/file with that name";
+            return false;
+        }
+    }
 
     void updateSize( Folder *f, int s ){
         f->size += s;
@@ -64,33 +95,40 @@ public:
     }
 
     void printStatus(){
-        cout << "Name\ti-node\tSize\n";
+        cout << "NAME\t\tI-NODE\t\tSIZE\n";
 
-        cout << name << "\t" << id << "\t" << size << "\n";
+        cout << name << "\t\t" << id << "\t\t" << size << "\n";
+
+        for(int i = 0; i < childFolders.size(); ++i)
+            cout << childFolders[i]->name << "\t\t" << childFolders[i]->id << "\t\t" << childFolders[i]->size << "\n";
+
+        for(int i = 0; i < childFiles.size(); ++i)
+            if ( i != childFiles.size()-1 )
+                cout << childFiles[i]->name << "\t\t" << childFiles[i]->id << "\t\t" << childFiles[i]->size << "\n";
+            else
+                cout << childFiles[i]->name << "\t\t" << childFiles[i]->id << "\t\t" << childFiles[i]->size << "";
     }
 
     void printChilds(){
         for(int i = 0; i < childFolders.size(); ++i)
-            cout << childFolders[i]->name << "    ";
+            cout << "\033[1;36m" << childFolders[i]->name << "\t";
 
-        for(int i = 0; i < files.size(); ++i)
-            cout << files[i]->name << "    ";
+        for(int i = 0; i < childFiles.size(); ++i)
+            cout << "\033[0m" << childFiles[i]->name << "\t";
 
-        if ( !childFolders.size() && !files.size() ) {
-            cout << "[LS] No folders or files were found";
+        if ( !childFolders.size() && !childFiles.size() ) {
+            cout << "SL-FS: No folders or files were found";
         }
-
-        cout << endl;
     }
 
     Folder *changeFolder( string n ){
         for(int i = 0; i < childFolders.size(); ++i)
             if( childFolders[i]->name == n ){
-                cout << "[CD] Folder swapped to: " << childFolders[i]->getCurrentPath(childFolders[i]) << "\n";
+                cout << "SL-FS: Folder swapped to: " << childFolders[i]->getCurrentPath(childFolders[i]) << "";
                 return childFolders[i];
             }
 
-        cout << "[CD] Folder not found\n";
+        cout << "SL-FS: Folder not found";
         return this;
     }
 };
@@ -101,7 +139,7 @@ int main(){
     string folder_name;
 
     Folder *root = new Folder("root");
-    Folder *CurrentFolder = root;
+    Folder *currentFolder = root;
 
     cout << "Commands list:\n";
     cout << "\tmkdir foldername: makes a new folder\n";
@@ -109,46 +147,60 @@ int main(){
     cout << "\tcd foldername: navigates to foldername\n";
     cout << "\tcreate filename.extension: makes a new file\n";
     cout << "\tstatus: shows current status\n";
-    cout << "\tpwd: shows the absolute route of the current folder\n\n\n";
+    cout << "\tpwd: shows the absolute route of the current folder\n";
+    cout << "\texit: terminates SL-FS\n\n\n";
 
     while(1){
-        // cout << "Command in progress: " << command << endl;
-        cout << "-> " << CurrentFolder->getCurrentPath( CurrentFolder ) << "$ ";
+        cout << "\033[1;31m-> " << currentFolder->getCurrentPath( currentFolder ) << "$\033[0m ";
         cin >> command;
 
         if(command == "exit"){
             break;
         }else if(command == "mkdir"){
             cin >> folder_name;
-            cout << "Creating new folder with name: " << folder_name << "\n\n";
 
             Folder *aux = new Folder(folder_name);
 
-            aux->setFather(CurrentFolder);
-            CurrentFolder->addSubFolder(aux);
+            if( currentFolder->addSubFolder(aux) ){
+                aux->setFather(currentFolder);
+                cout << "SL-FS: Creating new folder with name: " << folder_name << "";
+            }
         }else if(command == "ls"){
-            CurrentFolder->printChilds();
+            currentFolder->printChilds();
         }else if(command == "cd"){
             cin >> folder_name;
 
             if(folder_name == "root" || folder_name == ""){
-                CurrentFolder = root;
+                currentFolder = root;
             }else if(folder_name == ".."){
-                CurrentFolder = CurrentFolder->father;
+                if ( currentFolder->father != NULL ) {
+                    currentFolder = currentFolder->father;
+
+                    cout << "SL-FS: Folder swapped to: " << currentFolder->getCurrentPath( currentFolder ) << "";
+                }else{
+                    cout << "SL-FS: Father folder does not exists.";
+                }
             }else{
-                CurrentFolder = CurrentFolder->changeFolder(folder_name);
+                currentFolder = currentFolder->changeFolder( folder_name );
             }
         }else if(command == "create"){
             cin >> file_name;
+
             File *newFile = new File(file_name);
 
-            CurrentFolder->addFile( newFile );
-            CurrentFolder->updateSize( CurrentFolder, newFile->size );
+            if ( currentFolder->addFile( newFile ) ) {
+                currentFolder->updateSize( currentFolder, newFile->size );
+                cout << "SL-FS: Creating new file with name: " << file_name << "";
+            }
         }else if(command == "status"){
-            CurrentFolder->printStatus();
+            currentFolder->printStatus();
         }else if(command == "pwd"){
-            cout << CurrentFolder->getCurrentPath(CurrentFolder) << endl;
+            cout << currentFolder->getCurrentPath(currentFolder) << "";
+        }else{
+            cout << "SL-FS: Command '" << command << "' not found";
         }
+
+        cout << "\n";
     }
 
     return 0;
