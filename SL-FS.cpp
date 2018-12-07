@@ -1,3 +1,4 @@
+#include <time.h>
 #include <string>
 #include <vector>
 #include <string>
@@ -14,11 +15,13 @@ public:
     int id;
     int size;
     string name;
+    int creationTime;
 
     File(string name){
         this->id = counter_id;
         this->name = name;
         this->size = name.length();
+        this->creationTime = time(0);
 
         ++counter_id;
     }
@@ -29,6 +32,7 @@ public:
     int id;
     int size;
     string name;
+    int creationTime;
 
     Folder *father;
 
@@ -40,6 +44,7 @@ public:
         this->name = name;
         this->size = 0;
         this->father = NULL;
+        this->creationTime = time(0);
 
         ++counter_id;
     }
@@ -95,18 +100,25 @@ public:
     }
 
     void printStatus(){
-        cout << "NAME\t\tI-NODE\t\tSIZE\n";
+        cout << "NAME\t\t\t\tI-NODE\t\t\tSIZE\t\t\tCREATION TIME\n";
 
-        cout << name << "\t\t" << id << "\t\t" << size << "\n";
+        cout << name << "\t\t\t\t" << id << "\t\t\t" << size << "\t\t\t" << creationTime;
+
+        vector<string> allData;
+
+        if ( childFiles.size() || childFolders.size() )
+            cout << "\n";
 
         for(int i = 0; i < childFolders.size(); ++i)
-            cout << childFolders[i]->name << "\t\t" << childFolders[i]->id << "\t\t" << childFolders[i]->size << "\n";
+            allData.push_back( childFolders[i]->name + "\t\t\t\t" + to_string(childFolders[i]->id) + "\t\t\t" + to_string(childFolders[i]->size) + "\t\t\t" + to_string(childFolders[i]->creationTime) );
 
         for(int i = 0; i < childFiles.size(); ++i)
-            if ( i != childFiles.size()-1 )
-                cout << childFiles[i]->name << "\t\t" << childFiles[i]->id << "\t\t" << childFiles[i]->size << "\n";
-            else
-                cout << childFiles[i]->name << "\t\t" << childFiles[i]->id << "\t\t" << childFiles[i]->size << "";
+            allData.push_back( childFiles[i]->name + "\t\t\t" + to_string(childFiles[i]->id) + "\t\t\t" + to_string(childFiles[i]->size) + "\t\t\t" + to_string(childFiles[i]->creationTime) );
+
+        for(int i = 0; i < allData.size(); ++i){
+            cout << allData[i];
+            i != allData.size()-1 ? cout << "\n" : cout << "";
+        }
     }
 
     void printChilds(){
@@ -141,6 +153,8 @@ int main(){
     Folder *root = new Folder("root");
     Folder *currentFolder = root;
 
+    system("clear");
+
     cout << "Commands list:\n";
     cout << "\t" << "\033[1;32mHulk\033[0m" << " foldername: makes a new folder\n";
     cout << "\t" << "\033[1;31mSpiderman\033[0m" << ": shows current folder items\n";
@@ -172,6 +186,8 @@ int main(){
 
             if(folder_name == "root" || folder_name == ""){
                 currentFolder = root;
+
+                cout << "SL-FS: Folder swapped to: " << currentFolder->getCurrentPath( currentFolder ) << "";
             }else if(folder_name == ".."){
                 if ( currentFolder->father != NULL ) {
                     currentFolder = currentFolder->father;
